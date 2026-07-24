@@ -102,7 +102,6 @@ if __name__ == "__main__":
     df_daymet['time'] = pd.to_datetime(df_daymet['year'].astype(str), format='%Y') + pd.to_timedelta(df_daymet['yday'] - 1, unit='D')
     df_daymet = df_daymet.drop(columns=['year', 'yday'])
 
-]
     master_df = pd.merge(df_targets, df_daymet, on=['station', 'time'], how='inner')
     master_df.rename(columns=lambda x: x.split(' ')[0], inplace=True)
     flag_cols = [c for c in master_df.columns if 'FLAG' in c]
@@ -119,7 +118,7 @@ def engineer_climate_memory(df):
     # Basic Cumulative Sums
     master_df['prcp_cumsum'] =     master_df.groupby(['station', 'WY'])['prcp'].cumsum()
     master_df['vp_cumsum'] =     master_df.groupby(['station', 'WY'])['vp'].cumsum()
-     master_df['srad_cumsum'] =     master_df.groupby(['station', 'WY'])['srad'].cumsum()
+    master_df['srad_cumsum'] =     master_df.groupby(['station', 'WY'])['srad'].cumsum()
 
     # Freezing Degree Days (FDD)
     master_df['degrees_below_freezing'] = np.where(master_df['tavg'] < 0, master_df['tavg'].abs(), 0)
@@ -127,11 +126,11 @@ def engineer_climate_memory(df):
 
     # Melting Degree Days (MDD)
     master_df['degrees_above_freezing'] = np.where(master_df['tavg'] > 0, master_df['tavg'], 0)
-   master_ df['MDD_cumsum'] = master_df.groupby(['station', 'WY'])['degrees_above_freezing'].cumsum()
+    master_ df['MDD_cumsum'] = master_df.groupby(['station', 'WY'])['degrees_above_freezing'].cumsum()
 
     # Cleanup temporary columns
     master_df = master_df.drop(columns=['degrees_below_freezing', 'degrees_above_freezing'])
     
-    return df
     master_.to_parquet(PROJECT_DIR / "master_dataset_engineered.parquet")
+    return master_df
     
