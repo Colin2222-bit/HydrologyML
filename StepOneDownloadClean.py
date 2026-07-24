@@ -8,7 +8,8 @@ import xarray as xr
 from pathlib import Path
 
 #From "snotel_data.nc" - too big to put here, but use the easysnowdata repo : https://github.com/egagli/easysnowdata ... I downloaded all raw SNOTEL/CCSS and my training/testing period was from 2001 to 2025.
-
+#import easysnowdata
+#AllStations = easysnowdata.automatic_weather_stations.StationCollection(). Then filter years needed and save as netcdf
 def apply_physical_bounds_qc(ds):
     """Removes physically impossible target values."""
     for var in ['WTEQ', 'SNWD']:
