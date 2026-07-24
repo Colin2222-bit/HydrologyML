@@ -1,4 +1,3 @@
-
 import io
 import time
 import requests
@@ -7,9 +6,10 @@ import numpy as np
 import xarray as xr
 from pathlib import Path
 
-#From "snotel_data.nc" - too big to put here, but use the easysnowdata repo : https://github.com/egagli/easysnowdata ... I downloaded all raw SNOTEL/CCSS and my training/testing period was from 2001 to 2025.
-#import easysnowdata
-#AllStations = easysnowdata.automatic_weather_stations.StationCollection(). Then filter years needed and save as netcdf
+# Paths (Define globally so both execution and functions see it)
+archive_path = "snotel_data.nc" 
+PROJECT_DIR = Path('/content/drive/MyDrive/SWE_Project') # Update if on NERSC
+
 def apply_physical_bounds_qc(ds):
     """Removes physically impossible target values."""
     for var in ['WTEQ', 'SNWD']:
@@ -56,33 +56,6 @@ def apply_snow_physics_qc(ds):
     ds['WTEQ'] = ds['WTEQ'].where(~(ds['FLAG_SWE_GROSS'] | ds['FLAG_SWE_REVERSAL']))
     return ds
 
-def engineer_climate_memory(df):
-    """Calculates water-year cumulative features for snowpack memory."""
-    print("Engineering features...")
-        master_df = df.sort_values(['station', 'time'])
-    
-    # Standardize Temp
-    master_df['tavg'] = (master_df['tmax'] + master_df['tmin']) / 2
-
-    # Basic Cumulative Sums
-    master_df['prcp_cumsum'] =     master_df.groupby(['station', 'WY'])['prcp'].cumsum()
-    master_df['vp_cumsum'] =     master_df.groupby(['station', 'WY'])['vp'].cumsum()
-    master_df['srad_cumsum'] =     master_df.groupby(['station', 'WY'])['srad'].cumsum()
-
-    # Freezing Degree Days (FDD)
-    master_df['degrees_below_freezing'] = np.where(master_df['tavg'] < 0, master_df['tavg'].abs(), 0)
-    master_df['FDD_cumsum'] = master_df.groupby(['station', 'WY'])['degrees_below_freezing'].cumsum()
-
-    # Melting Degree Days (MDD)
-    master_df['degrees_above_freezing'] = np.where(master_df['tavg'] > 0, master_df['tavg'], 0)
-    master_ df['MDD_cumsum'] = master_df.groupby(['station', 'WY'])['degrees_above_freezing'].cumsum()
-
-    # Cleanup temporary columns
-    master_df = master_df.drop(columns=['degrees_below_freezing', 'degrees_above_freezing'])
-    
-    master_.to_parquet(PROJECT_DIR / "master_dataset_engineered.parquet")
-    return master_df
-    
 def fetch_daymet_rest(station_id, lat, lon, start_year, end_year, retries=3):
     """Fetches Daymet single-pixel data."""
     url = (f"https://daymet.ornl.gov/single-pixel/api/data?"
@@ -101,6 +74,31 @@ def fetch_daymet_rest(station_id, lat, lon, start_year, end_year, retries=3):
             time.sleep(3)
     return None
 
+def engineer_climate_memory(df):
+    """Calculates water-year cumulative features for snowpack memory."""
+    print("Engineering features...")
+    master_df = df.sort_values(['station', 'time']).copy()
+    
+    master_df['tavg'] = (master_df['tmax'] + master_df['tmin']) / 2
+
+    master_df['prcp_cumsum'] = master_df.groupby(['station', 'WY'])['prcp'].cumsum()
+    master_df['vp_cumsum']   = master_df.groupby(['station', 'WY'])['vp'].cumsum()
+    master_df['srad_cumsum'] = master_df.groupby(['station', 'WY'])['srad'].cumsum()
+
+    master_df['degrees_below_freezing'] = np.where(master_df['tavg'] < 0, master_df['tavg'].abs(), 0)
+    master_df['FDD_cumsum'] = master_df.groupby(['station', 'WY'])['degrees_below_freezing'].cumsum()
+
+    master_df['degrees_above_freezing'] = np.where(master_df['tavg'] > 0, master_df['tavg'], 0)
+    master_df['MDD_cumsum'] = master_df.groupby(['station', 'WY'])['degrees_above_freezing'].cumsum()
+
+    master_df = master_df.drop(columns=['degrees_below_freezing', 'degrees_above_freezing'])
+    
+    # Save directly to file for Step 2
+    PROJECT_DIR.mkdir(parents=True, exist_ok=True)
+    master_df.to_parquet(PROJECT_DIR / "master_dataset_engineered.parquet")
+    print("✅ Feature engineering complete and dataset exported!")
+    return master_df
+
 if __name__ == "__main__":
     print("1. Loading and Cleaning SNOTEL Targets...")
     ds = xr.open_dataset(archive_path)
@@ -108,7 +106,6 @@ if __name__ == "__main__":
     ds = apply_physical_bounds_qc(ds)
     ds = apply_snwd_stagnation_qc(ds)
     ds = apply_snow_physics_qc(ds)
-    ds = engineer_climate_features(ds)
     
     ds = ds.dropna(dim='time', how='any', subset=['WTEQ', 'SNWD'])
     df_targets = ds.to_dataframe().reset_index().dropna(subset=['WTEQ', 'SNWD'])
@@ -135,4 +132,5 @@ if __name__ == "__main__":
     flag_cols = [c for c in master_df.columns if 'FLAG' in c]
     master_df = master_df.drop(columns=flag_cols)
     
-
+    # Run feature engineering function with corrected data-type structure
+    master_df = engineer_climate_memory(master_df)
