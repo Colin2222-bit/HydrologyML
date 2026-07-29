@@ -89,7 +89,7 @@ def plot_diagnostic_suite(val_df, model_name, scenario, exp_name, target, model=
 
     # ==================================================
     # 1. Global Aggregate Time Series
-    # ==================================================
+   
     agg = val_df.groupby('DOWY')[[target, pred_col]].mean()
     plt.figure(figsize=(8, 3))
     line1, = plt.plot(agg.index, agg[target], label='Observed', color='#1f77b4', linewidth=2)
@@ -109,9 +109,9 @@ def plot_diagnostic_suite(val_df, model_name, scenario, exp_name, target, model=
     plt.show()
     plt.close()  # Memory safety release
 
-    # ==================================================
+   
     # 2. 1:1 Scatter Plot
-    # ==================================================
+
     plt.figure(figsize=(6, 5))
 
     r2_val, _, _, _, kge_val = calc_metrics(val_df[target], val_df[pred_col])
@@ -142,9 +142,8 @@ def plot_diagnostic_suite(val_df, model_name, scenario, exp_name, target, model=
     plt.show()
     plt.close()  # Memory safety release
 
-    # ==================================================
-    # 3. Spatial Geo Performance Map (Cartopy States)
-    # ==================================================
+
+    # 3. Spatial Geo Performance Map 
     site_perf = val_df.groupby(['station', 'latitude', 'longitude'], group_keys=False).apply(
         lambda x: pd.Series([calc_metrics(x[target], x[pred_col])[4]], index=['KGE']),
         include_groups=False
@@ -237,6 +236,8 @@ feature_scenarios = {
 }
 models_to_test = {
     'LinReg': LinearRegression(),
+
+    #LightGBM parameters were tuned for the baseline temporal test using optuna. I wanted to keep all parameters the same for all tests. 
     'LightGBM': LGBMRegressor(n_estimators=1000, learning_rate=0.05, num_leaves=31, min_child_samples=200,
                               reg_lambda=2.0, max_bin=63, subsample=0.8, subsample_freq=5,
                               colsample_bytree=0.8, random_state=42, n_jobs=-1, verbose=-1)
@@ -261,7 +262,7 @@ for _, group in stations_meta.groupby(['lat_round', 'lon_round']):
 
 master_df = master_df[~master_df['station'].isin(ccss_to_drop)]
 master_df = master_df.drop(columns=['lat_round', 'lon_round'])
-print(f"✅ Successfully dropped {len(ccss_to_drop)} redundant CCSS stations while preserving Forni Ridge and Alpha!")
+
 
 # 2. DYNAMICALLY DROP ROWS MISSING OUR DESIRED TARGETS
 master_df = master_df.dropna(subset=targets)
@@ -285,32 +286,24 @@ master_df = master_df.dropna(subset=all_features)
 for col in cat_vars:
     master_df[col] = master_df[col].astype('category')
 
-# ==================================================
-# 📊 DIAGNOSTIC STATION COUNT CHECK (BEFORE EXECUTIONS)
-# ==================================================
-print("\n" + "="*50)
-print("📊 FINAL EXPERIMENTAL STATION NETWORK VERIFICATION")
-print("="*50)
+
+
 unique_stations_df = master_df[['station', 'network']].drop_duplicates(subset=['station'])
 snotel_count = (unique_stations_df['network'] == 'SNOTEL').sum()
 ccss_count = (unique_stations_df['network'] == 'CCSS').sum()
 total_stations = len(unique_stations_df)
 
-print(f"✅ Total Clean Operational Stations: {total_stations}")
-print(f"   🛰️ Active SNOTEL Stations (Federal): {snotel_count}")
-print(f"   🏔️ Active CCSS Stations (California): {ccss_count}")
-print("="*50 + "\n")
 
-# --- EXECUTOR WITH CLEAN TABLES ---
+# Experiment
 def run_experiment(train_df, val_df, exp_name):
     val_df = val_df.copy()
     all_res = []
 
     for target in targets:
-        print(f"\n🎯 Target Variable: {target}")
+        print(f"\n Target Variable: {target}")
 
         # Baseline Climatology
-        print("  🎬 Running Scenario: 0_Baseline (Climatology)")
+        print("Scenario: 0_Baseline (Climatology)")
         clim_map = train_df.groupby('DOWY')[target].mean()
 
         preds_train_bl = train_df['DOWY'].map(clim_map).fillna(train_df[target].mean())
@@ -324,7 +317,7 @@ def run_experiment(train_df, val_df, exp_name):
             "R2": r2_val_bl, "RMSE": rmse_val_bl, "KGE": kge_val_bl, "MAE": mae_val_bl,
             "MBE": mbe_val_bl,
         })
-        print(f"    ✅ Baseline Done. | Train R2: {r2_tr_bl:.3f} | Val R2: {r2_val_bl:.3f} | Diff: {r2_tr_bl - r2_val_bl:.3f}")
+        print(f" Baseline Done. | Train R2: {r2_tr_bl:.3f} | Val R2: {r2_val_bl:.3f} | Diff: {r2_tr_bl - r2_val_bl:.3f}")
 
         # Machine Learning Scenarios
         for scenario_name, num_vars in feature_scenarios.items():
@@ -343,7 +336,7 @@ def run_experiment(train_df, val_df, exp_name):
             X_val_p = pre.transform(X_val)
 
             for model_name, model_algo in models_to_test.items():
-                print(f"    🤖 Training Model: {model_name}...")
+                print(f"  Training Model: {model_name}...")
                 fresh_model = clone(model_algo)
 
                 if model_name == 'LightGBM':
@@ -365,7 +358,7 @@ def run_experiment(train_df, val_df, exp_name):
                     "R2": r2_val, "RMSE": rmse_val, "KGE": kge_val, "MAE": mae,
                     "MBE": mbe
                 })
-                print(f"    ✅ {model_name} Done. | Train R2: {r2_tr:.3f} | Val R2: {r2_val:.3f} | Diff: {r2_tr - r2_val:.3f}")
+                print(f" {model_name} Done. | Train R2: {r2_tr:.3f} | Val R2: {r2_val:.3f} | Diff: {r2_tr - r2_val:.3f}")
 
                 if model_name == 'LightGBM':
                     plot_diagnostic_suite(val_df, model_name, scenario_name, exp_name, target, model=fresh_model, feature_names=feats)
@@ -379,9 +372,9 @@ np.random.seed(42)
 unique_stations = master_df['station'].unique()
 new_stations = np.random.choice(unique_stations, size=int(len(unique_stations) * 0.20), replace=False)
 
-print("\n==================================================")
-print("🚀 EXPERIMENT 1: TEMPORAL (FINAL TEST)")
-print("==================================================")
+
+print(" EXPERIMENT 1: TEMPORAL")
+
 train1 = master_df[(master_df["WY"] >= 2001) & (master_df["WY"] <= 2019)].copy()
 test1 = master_df[(master_df["WY"] >= 2020) & (master_df["WY"] <= 2025)].copy()
 res1 = run_experiment(train1, test1, "Temporal")
@@ -389,9 +382,7 @@ display(res1)
 del train1, test1; gc.collect()
 print('All done with EXP1')
 
-print("\n==================================================")
-print("🚀 EXPERIMENT 2: WITHIN-REGION (FINAL TEST)")
-print("==================================================")
+print(" EXPERIMENT 2: TEMPORAL-REGIONAL")
 regions = ['PNW', 'Sierra', 'Rockies', 'Southwest', 'Alaska']
 for reg in regions:
     print(f"\n📍 Sub-Region Pipeline: {reg}")
@@ -404,7 +395,7 @@ for reg in regions:
 
 print('All done with EXP2')
 
-print(f"\n{'='*50}\n🚀 EXPERIMENT 3: PURE SPATIAL (NEW STATIONS, SAME YEARS)\n{'='*50}")
+print(" EXPERIMENT 3: SPATIAL")
 train_pure = master_df[(~master_df['station'].isin(new_stations)) & (master_df["WY"] >= 2001) & (master_df["WY"] <= 2019)].copy()
 test_pure = master_df[(master_df['station'].isin(new_stations)) & (master_df["WY"] >= 2001) & (master_df["WY"] <= 2019)].copy()
 res3 = run_experiment(train_pure, test_pure, "Pure_Spatial")
@@ -412,7 +403,7 @@ display(res3)
 del train_pure, test_pure; gc.collect()
 print('All done with EXP3')
 
-print(f"\n{'='*50}\n🚀 EXPERIMENT 4: SPATIOTEMPORAL (NEW STATIONS, NEW YEARS)\n{'='*50}")
+print(" EXPERIMENT 4: SPATIoTEMPORL")
 train_spatio = master_df[(~master_df['station'].isin(new_stations)) & (master_df["WY"] >= 2001) & (master_df["WY"] <= 2019)].copy()
 test_spatio = master_df[(master_df['station'].isin(new_stations)) & (master_df["WY"] >= 2020) & (master_df["WY"] <= 2025)].copy()
 res4 = run_experiment(train_spatio, test_spatio, "Spatiotemporal")
@@ -420,9 +411,7 @@ display(res4)
 del train_spatio, test_spatio; gc.collect()
 print('All done with EXP4')
 
-print("\n==================================================")
-print("🚀 EXPERIMENT 5: SIERRA ZERO-SHOT (FINAL TEST)")
-print("==================================================")
+print(" EXPERIMENT 5: Sierra Zer-Shot (Spatiotemporal")
 train2 = master_df[(master_df['macro_region'] != 'Sierra') & (master_df["WY"] >= 2001) & (master_df["WY"] <= 2019)].copy()
 test2 = master_df[(master_df['macro_region'] == 'Sierra') & (master_df["WY"] >= 2020) & (master_df["WY"] <= 2025)].copy()
 res2 = run_experiment(train2, test2, "Sierra Zero-Shot")
@@ -431,13 +420,9 @@ del train2, test2; gc.collect()
 
 print('All done with final testing! 🚀')
 
-# ==================================================
-# 📦 AUTO-ZIP ROUTINE FOR DOWNLOAD-READY ASSETS
-# ==================================================
-print("\n" + "="*50)
-print("📦 COMPRESSING PLOTS FOLDER FOR EASY RETRIEVAL")
-print("="*50)
+#Downloads
+
 zip_output_path = PROJECT_DIR / "final_poster_plots"
 shutil.make_archive(zip_output_path, 'zip', PLOTS_DIR)
-print(f"✅ Compression Complete! Download your files here: {zip_output_path}.zip")
+print(f" Compression Complete! Download your files here: {zip_output_path}.zip")
 print("="*50 + "\n")
