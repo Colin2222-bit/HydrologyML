@@ -19,7 +19,10 @@ import os
 import sys
 import shutil
 
-# Use SWE_project file here 
+# Use parquet file
+#print("Loading Master Data...")
+#master_df =  master_dataset_engineered.parquet")
+#master_df.rename(columns=lambda x: x.split(' ')[0], inplace=True)
 
 
 # --- THE METRICS ENGINE ---
@@ -231,9 +234,7 @@ models_to_test = {
 }
 
 # --- DATA LOADING & CLEANING ---
-print("Loading Master Data...")
-master_df = pd.read_parquet(PROJECT_DIR / "master_dataset_engineered.parquet")
-master_df.rename(columns=lambda x: x.split(' ')[0], inplace=True)
+
 
 # 1. SMART NETWORK-AWARE DEDUPLICATION
 print("Scanning and resolving duplicate SNOTEL/CCSS stations...")
