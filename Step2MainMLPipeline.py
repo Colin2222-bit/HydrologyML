@@ -19,21 +19,8 @@ import os
 import sys
 import shutil
 
-# Define base directory depending on environment
-if os.path.exists('/content'):
-    print("Detected Google Colab environment.")
-    from google.colab import drive
-    drive.mount('/content/drive')
-    PROJECT_DIR = Path('/content/drive/MyDrive/SWE_Project')
-else:
-    print("Detected NERSC/Jupyter environment.")
-    PROJECT_DIR = Path('/global/cfs/cdirs/m4062/colin_brown/')
+# Use SWE_project file here 
 
-# Define and create high-resolution plots output directory
-PLOTS_DIR = PROJECT_DIR / "poster_plots"
-PLOTS_DIR.mkdir(parents=True, exist_ok=True)
-print(f"Project directory set to: {PROJECT_DIR}")
-print(f"High-resolution figures will be saved to: {PLOTS_DIR}")
 
 # --- THE METRICS ENGINE ---
 def calc_metrics(y_true, y_pred):
