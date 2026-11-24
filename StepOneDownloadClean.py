@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 from pathlib import Path
 
-# Use SWE_project spreadsheet
+# Not needed, parquet already cleaned, just for reference 
 
 def apply_physical_bounds_qc(ds):
     """Removes physically impossible target values."""
@@ -92,10 +92,7 @@ def engineer_climate_memory(df):
     master_df = master_df.drop(columns=['degrees_below_freezing', 'degrees_above_freezing'])
     
     # Save directly to file for Step 2
-    PROJECT_DIR.mkdir(parents=True, exist_ok=True)
-    master_df.to_parquet(PROJECT_DIR / "master_dataset_engineered.parquet")
-    print("✅ Feature engineering complete and dataset exported!")
-    return master_df
+    
 
 if __name__ == "__main__":
     print("1. Loading and Cleaning SNOTEL Targets...")
