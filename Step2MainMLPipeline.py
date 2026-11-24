@@ -410,7 +410,3 @@ print('All done with final testing! 🚀')
 
 #Downloads
 
-zip_output_path = PROJECT_DIR / "final_poster_plots"
-shutil.make_archive(zip_output_path, 'zip', PLOTS_DIR)
-print(f" Compression Complete! Download your files here: {zip_output_path}.zip")
-print("="*50 + "\n")
