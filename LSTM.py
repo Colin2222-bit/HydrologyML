@@ -17,13 +17,10 @@ import timejjjjjll
 from pathlib import Path
 from google.colab import drive
 
-drive.mount('/content/drive')
-PROJECT_DIR = Path('/content/drive/MyDrive/SWE_Project')
-feature_scenarios = {
+#Import master_dataset_engineered.parquet
     "1_Meteo_Only": ['tmax', 'tmin', 'DOWY', 'prcp', 'vp', 'srad', 'dayl', 'elevation_m', 'longitude', 'latitude']
 }
 
-master_df = pd.read_parquet(PROJECT_DIR / "master_dataset_engineered.parquet")
 
 
 class SNOTELDataset(Dataset):
