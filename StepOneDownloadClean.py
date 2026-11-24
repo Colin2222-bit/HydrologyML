@@ -6,9 +6,7 @@ import numpy as np
 import xarray as xr
 from pathlib import Path
 
-# Paths (Define globally so both execution and functions see it)
-archive_path = "snotel_data.nc" 
-PROJECT_DIR = Path('/content/drive/MyDrive/SWE_Project') # Update if on NERSC
+# Use SWE_project spreadsheet
 
 def apply_physical_bounds_qc(ds):
     """Removes physically impossible target values."""
